@@ -1,4 +1,4 @@
-import { DashboardLayout } from "@/components/DashboardLayout";
+import DashboardLayout from "@/components/DashboardLayout";
 import { GlassCard } from "@/components/GlassCard";
 import { Sparkles } from "lucide-react";
 

@@ -42,9 +42,9 @@ export function Sidebar() {
         })}
       </nav>
       <div className="p-3 border-t border-border/50">
-        <Link to="/dashboard/settings" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all">
-          <Settings className="h-4 w-4" />
-          <span className="font-medium">Settings</span>
+        <Link to="/dashboard/profile" className={cn("flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all relative", pathname === "/dashboard/profile" ? "text-foreground bg-gradient-to-r from-primary/15 to-accent/10 border border-primary/20" : "text-muted-foreground hover:text-foreground hover:bg-white/5")}>
+          <Settings className={cn("h-4 w-4", pathname === "/dashboard/profile" && "text-primary")} />
+          <span className="font-medium">Profile & Settings</span>
         </Link>
       </div>
     </aside>

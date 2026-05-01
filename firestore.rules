@@ -20,28 +20,38 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      // The frontend should primarily read data. The backend creates/updates documents.
       allow get: if isSignedIn() && isOwner(userId) && isValidId(userId);
       allow list: if isSignedIn() && isOwner(userId) && isValidId(userId);
-      allow update: if isSignedIn() && isOwner(userId) && isValidId(userId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'preferences', 'profileImage']);
+      allow create: if isSignedIn() && isOwner(userId) && isValidId(userId);
+      allow update: if isSignedIn() && isOwner(userId) && isValidId(userId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'name', 'preferences', 'profileImage']);
       
+      // Settings subcollection
+      match /profile/settings {
+        allow read, write: if isSignedIn() && isOwner(userId) && isValidId(userId);
+      }
+
       match /analyses/{analysisId} {
         allow get: if isSignedIn() && isOwner(userId) && isValidId(userId) && isValidId(analysisId);
         allow list: if isSignedIn() && isOwner(userId) && isValidId(userId);
-        allow delete: if isSignedIn() && isOwner(userId) && isValidId(userId) && isValidId(analysisId);
+        allow write: if isSignedIn() && isOwner(userId) && isValidId(userId) && isValidId(analysisId);
       }
       
       match /outreach/{outreachId} {
         allow get: if isSignedIn() && isOwner(userId) && isValidId(userId) && isValidId(outreachId);
         allow list: if isSignedIn() && isOwner(userId) && isValidId(userId);
-        allow delete: if isSignedIn() && isOwner(userId) && isValidId(userId) && isValidId(outreachId);
+        allow write: if isSignedIn() && isOwner(userId) && isValidId(userId) && isValidId(outreachId);
       }
       
       match /followups/{followupId} {
         allow get: if isSignedIn() && isOwner(userId) && isValidId(userId) && isValidId(followupId);
         allow list: if isSignedIn() && isOwner(userId) && isValidId(userId);
-        allow delete: if isSignedIn() && isOwner(userId) && isValidId(userId) && isValidId(followupId);
+        allow write: if isSignedIn() && isOwner(userId) && isValidId(userId) && isValidId(followupId);
       }
+    }
+    
+    match /shared/{shareId} {
+      allow read: if true;
+      allow create: if isSignedIn();
     }
   }
 }

@@ -1,7 +1,11 @@
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
-import { DashboardLayout } from '../components/DashboardLayout';
+import { describe, it, expect, vi } from 'vitest';
+import DashboardLayout from '../components/DashboardLayout';
 import { BrowserRouter } from 'react-router-dom';
+
+vi.mock('@/hooks/useAuth', () => ({
+  useAuth: vi.fn(() => ({ user: { displayName: 'John Doe', email: 'john@example.com' } }))
+}));
 
 describe('DashboardLayout Accessibility & Rendering', () => {
   it('renders skip to main content link', () => {

@@ -1,5 +1,6 @@
-import { supabase } from "@/integrations/supabase/client";
 import type { ProspectIntel, OutreachResult, ResponseAnalysis, FollowupStrategy } from "./samvaad";
+import { auth, db } from "@/lib/firebase";
+import { collection, doc, setDoc, getDocs, updateDoc, getDoc, query, orderBy } from "firebase/firestore";
 
 export type RunRecord = {
   id: string;
@@ -48,85 +49,90 @@ function inferLabel(intel: ProspectIntel | null): string {
   return intel.personality_type || "Prospect";
 }
 
+const getUserId = () => {
+  const user = auth.currentUser;
+  if (!user) throw new Error("Must be logged in to save runs");
+  return user.uid;
+};
+
 export async function saveOutreachRun(args: {
   intel: ProspectIntel;
   outreach: OutreachResult;
   channel: string;
   tone: string;
 }): Promise<string | null> {
-  const { data, error } = await supabase
-    .from("outreach_runs")
-    .insert({
-      prospect_label: inferLabel(args.intel),
-      channel: args.channel,
-      tone: args.tone,
-      intel: args.intel as any,
-      outreach: args.outreach as any,
-    })
-    .select("id")
-    .single();
-  if (error) { console.error(error); return null; }
-  setCurrentRunId(data.id);
-  return data.id;
+  const uid = getUserId();
+  const id = `run_${Date.now()}`;
+  const run: RunRecord = {
+    id,
+    created_at: new Date().toISOString(),
+    prospect_label: inferLabel(args.intel),
+    channel: args.channel,
+    tone: args.tone,
+    intel: args.intel,
+    outreach: args.outreach,
+    analysis: null,
+    followup: null,
+    sentiment: null,
+    intent_score: null,
+    deal_temperature: null,
+    interest_level: null,
+    has_response: false,
+    has_followup: false,
+    outcome: null,
+    outcome_at: null,
+  };
+  
+  await setDoc(doc(db, "users", uid, "outreach", id), run);
+  return id;
 }
 
-export async function attachAnalysis(runId: string, analysis: ResponseAnalysis) {
-  const { error } = await supabase
-    .from("outreach_runs")
-    .update({
-      analysis: analysis as any,
-      sentiment: analysis.sentiment,
-      intent_score: Math.round(analysis.intent_score),
-      deal_temperature: Math.round(analysis.deal_temperature),
-      interest_level: analysis.interest_level,
-      has_response: true,
-    })
-    .eq("id", runId);
-  if (error) console.error(error);
+export async function attachAnalysis(id: string, analysis: ResponseAnalysis): Promise<void> {
+  const uid = getUserId();
+  const ref = doc(db, "users", uid, "outreach", id);
+  await updateDoc(ref, {
+    has_response: true,
+    analysis,
+    sentiment: analysis.sentiment,
+    outcome: "replied"
+  });
 }
 
-export async function attachFollowup(runId: string, followup: FollowupStrategy) {
-  const { error } = await supabase
-    .from("outreach_runs")
-    .update({ followup: followup as any, has_followup: true })
-    .eq("id", runId);
-  if (error) console.error(error);
+export async function attachFollowup(id: string, followup: FollowupStrategy): Promise<void> {
+  const uid = getUserId();
+  const ref = doc(db, "users", uid, "outreach", id);
+  await updateDoc(ref, {
+    has_followup: true,
+    followup
+  });
 }
 
 export async function fetchRuns(): Promise<RunRecord[]> {
-  const { data, error } = await supabase
-    .from("outreach_runs")
-    .select("*")
-    .order("created_at", { ascending: false })
-    .limit(500);
-  if (error) { console.error(error); return []; }
-  return (data || []) as unknown as RunRecord[];
+  const uid = getUserId();
+  const runsRef = collection(db, "users", uid, "outreach");
+  const q = query(runsRef, orderBy("created_at", "desc"));
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(doc => doc.data() as RunRecord);
 }
 
-export async function setRunOutcome(runId: string, outcome: OutcomeKey) {
-  const { error } = await supabase
-    .from("outreach_runs")
-    .update({ outcome, outcome_at: new Date().toISOString() } as any)
-    .eq("id", runId);
-  if (error) console.error(error);
+export async function setRunOutcome(id: string, outcome: OutcomeKey | null): Promise<void> {
+  const uid = getUserId();
+  const ref = doc(db, "users", uid, "outreach", id);
+  await updateDoc(ref, {
+    outcome_at: new Date().toISOString(),
+    outcome
+  });
 }
 
 export async function createShareLink(payload: any): Promise<string | null> {
-  const { data, error } = await supabase
-    .from("share_links")
-    .insert({ payload })
-    .select("id")
-    .single();
-  if (error) { console.error(error); return null; }
-  return data.id;
+  // Share links can be public, so they are stored outside user-specific space
+  const id = `share_${Date.now()}`;
+  await setDoc(doc(db, "shared", id), { payload, created_at: new Date().toISOString() });
+  return id;
 }
 
-export async function fetchShareLink(id: string): Promise<any | null> {
-  const { data, error } = await supabase
-    .from("share_links")
-    .select("payload, created_at")
-    .eq("id", id)
-    .maybeSingle();
-  if (error) { console.error(error); return null; }
-  return data;
+export async function fetchShareLink(shareId: string): Promise<{ payload: any; created_at: string } | null> {
+  const snapshot = await getDoc(doc(db, "shared", shareId));
+  if (!snapshot.exists()) return null;
+  return snapshot.data() as { payload: any; created_at: string };
 }

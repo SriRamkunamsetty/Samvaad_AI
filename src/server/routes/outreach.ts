@@ -24,7 +24,7 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res: Response) =
   try {
     const data = outreachSchema.parse(req.body);
     
-    const outreach = await generateOutreach(data.analysis, data.valueProposition, data.senderContext);
+    const outreach = await generateOutreach(data.analysis as any, data.valueProposition, data.senderContext);
 
     if (req.user) {
       await db.collection('users').doc(req.user.uid).collection('outreach').add({

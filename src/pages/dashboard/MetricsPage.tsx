@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { DashboardLayout } from "@/components/DashboardLayout";
+import DashboardLayout from "@/components/DashboardLayout";
 import { GlassCard } from "@/components/GlassCard";
 import { fetchRuns, RunRecord, OUTCOMES, OutcomeKey } from "@/services/runs";
 import { AILoader } from "@/components/AILoader";

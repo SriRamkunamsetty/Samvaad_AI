@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { DashboardLayout } from "@/components/DashboardLayout";
+import DashboardLayout from "@/components/DashboardLayout";
 import { GlassCard } from "@/components/GlassCard";
 import { Brain, MessageSquare, Activity, Calendar, Wand2, ArrowUpRight, TrendingUp, Users, Target } from "lucide-react";
 
