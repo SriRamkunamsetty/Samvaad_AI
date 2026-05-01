@@ -1,0 +1,47 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Basic helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    function isValidId(id) {
+       return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    match /{document=**} {
+      allow read, write: if false; // Secure by default
+    }
+
+    match /users/{userId} {
+      // The frontend should primarily read data. The backend creates/updates documents.
+      allow get: if isSignedIn() && isOwner(userId) && isValidId(userId);
+      allow list: if isSignedIn() && isOwner(userId) && isValidId(userId);
+      allow update: if isSignedIn() && isOwner(userId) && isValidId(userId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'preferences', 'profileImage']);
+      
+      match /analyses/{analysisId} {
+        allow get: if isSignedIn() && isOwner(userId) && isValidId(userId) && isValidId(analysisId);
+        allow list: if isSignedIn() && isOwner(userId) && isValidId(userId);
+        allow delete: if isSignedIn() && isOwner(userId) && isValidId(userId) && isValidId(analysisId);
+      }
+      
+      match /outreach/{outreachId} {
+        allow get: if isSignedIn() && isOwner(userId) && isValidId(userId) && isValidId(outreachId);
+        allow list: if isSignedIn() && isOwner(userId) && isValidId(userId);
+        allow delete: if isSignedIn() && isOwner(userId) && isValidId(userId) && isValidId(outreachId);
+      }
+      
+      match /followups/{followupId} {
+        allow get: if isSignedIn() && isOwner(userId) && isValidId(userId) && isValidId(followupId);
+        allow list: if isSignedIn() && isOwner(userId) && isValidId(userId);
+        allow delete: if isSignedIn() && isOwner(userId) && isValidId(userId) && isValidId(followupId);
+      }
+    }
+  }
+}
